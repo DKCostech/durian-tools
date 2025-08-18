@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>냉동 두리안 해동 시간 계산기 – iOS 대응 & 그래프 보강</title>
+  <!-- Chart.js 및 플러그인 스크립트 로드 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 10px;
+      background: #f5f5f5;
+      -webkit-text-size-adjust: 100%;
+    }
+    .container {
+      max-width: 100%;
+      background: #fff;
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.08);
+      margin: 0 auto;
+    }
+    .header {
+      text-align: center;
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: 1.25rem;
+      color: #222;
+      display: inline-block;
+    }
+    .lang-selector {
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: center;
+      gap: 15px; /* 버튼 간 간격 확대 */
+      margin-top: 10px;
+    }
+    .lang-btn {
+      background-color: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 5px;
+      transition: transform 0.2s;
+      width: 50px; /* SVG 아이콘 크기 확대 */
+      height: 33px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2)); /* 선명도를 위한 그림자 효과 */
+    }
+    .lang-btn:hover {
+      transform: scale(1.1);
+    }
+    .lang-btn.active {
+      box-shadow: 0 0 0 3px #2e7d32;
+    }
+    .lang-btn svg {
+      width: 100%;
+      height: 100%;
+      border-radius: 4px;
+    }
+    /* 필드 명과 입력값을 한 줄로 정렬하기 위한 스타일 */
+    .input-group {
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .input-group label {
+      min-width: 150px; /* 필드 명이 한 줄에 표시되도록 최소 너비 지정 */
+      flex-shrink: 0; /* 필드 명이 축소되지 않도록 설정 */
+      font-weight: bold;
+      color: #444;
+      font-size: .95rem;
+    }
+    .input-group input, .input-group select {
+      flex-grow: 1; /* 입력 필드가 남은 공간을 채우도록 설정 */
+      width: auto;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-size: 1rem;
+      -webkit-appearance: none;
+      appearance: none;
+      background: #fff;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #2e7d32;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      cursor: pointer;
+      margin: 10px 0 14px;
+    }
+    button:active {
+      background: #1b5e20;
+      transform: scale(.99);
+    }
+    .result {
+      margin-top: 8px;
+      padding: 12px;
+      background: #f0f8ff;
+      border-radius: 10px;
+      border-left: 5px solid #2e7d32;
+    }
+    .result-item {
+      margin: 6px 0;
+      font-size: 1.02rem;
+    }
+    .result-value {
+      font-weight: 800;
+      color: #1565c0;
+    }
+    .water-info {
+      color: #0057b7;
+      margin-top: 6px;
+      font-size: .9rem;
+      padding: 10px;
+      background: #e6f2ff;
+      border-radius: 8px;
+      line-height: 1.45;
+    }
+    .warning {
+      color: #c62828;
+      font-size: .82rem;
+      margin-top: 8px;
+      text-align: center;
+    }
+    .disclaimer {
+      font-size: .82rem;
+      color: #0066cc;
+      margin-top: 12px;
+      padding: 10px;
+      background: #f0f0f0;
+      border-radius: 8px;
+      line-height: 1.45;
+    }
+    .chart-container {
+      position: relative;
+      height: 320px;
+      margin-top: 12px;
+      margin-bottom: 10px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 id="app-title">냉동 두리안 해동 시간 계산기</h1>
+      <div class="lang-selector">
+        <button class="lang-btn active" data-lang="ko" title="한국어">
+          <svg width="100%" height="100%" viewBox="0 0 100 67">
+            <rect width="100" height="67" fill="#fff"/>
+            <path d="M50,45a20,20 0 1,0 0,-40a20,20 0 1,1 0,40z" fill="#000"/>
+            <path d="M50,45a20,20 0 1,0 0,-40a20,20 0 0,1 0,40z" fill="#cd2e3a"/>
+            <path d="M50,45A20,20 0 1,1 50,5" fill="#0047a0"/>
+            <path d="M80,10 L90,10 L90,20 Z M80,10 L85,20 Z" fill="#000"/>
+            <path d="M20,10 L10,10 L10,20 Z M20,10 L15,20 Z" fill="#000"/>
+            <path d="M80,55 L90,55 L90,45 Z M80,55 L85,45 Z" fill="#000"/>
+            <path d="M20,55 L10,55 L10,45 Z M20,55 L15,45 Z" fill="#000"/>
+          </svg>
+        </button>
+        <button class="lang-btn" data-lang="zh" title="中文">
+          <svg width="100%" height="100%" viewBox="0 0 100 67">
+            <rect width="100" height="67" fill="#ee1c23"/>
+            <polygon points="20,10 30,12 30,18 20,20 20,10" fill="#f8d533"/>
+            <polygon points="40,10 50,12 50,18 40,20 40,10" fill="#f8d533"/>
+            <polygon points="20,40 30,42 30,48 20,50 20,40" fill="#f8d533"/>
+            <polygon points="40,40 50,42 50,18 40,20 40,40" fill="#f8d533"/>
+            <polygon points="20,60 30,62 30,68 20,70 20,60" fill="#f8d533"/>
+          </svg>
+        </button>
+        <button class="lang-btn" data-lang="en" title="English">
+          <svg width="100%" height="100%" viewBox="0 0 100 67">
+            <rect width="100" height="67" fill="#fff"/>
+            <rect width="100" height="10" fill="#b22234"/>
+            <rect y="20" width="100" height="10" fill="#b22234"/>
+            <rect y="40" width="100" height="10" fill="#b22234"/>
+            <rect y="60" width="100" height="10" fill="#b22234"/>
+            <rect width="40" height="27" fill="#3c3b6e"/>
+            <polygon points="20,2.5 23.5,8.5 35,8.5 25.5,14 28,20 20,16 12,20 14.5,14 5,8.5 16.5,8.5" fill="#fff"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="input-group">
+      <label for="initialTemp" id="label-initialTemp">냉동 두리안 온도 (°C)</label>
+      <input type="number" id="initialTemp" min="-50" max="-1" value="-18" inputmode="decimal" />
+    </div>
+    <div class="input-group">
+      <label for="weight" id="label-weight">두리안 중량 (g)</label>
+      <input type="number" id="weight" min="100" max="5000" value="450" step="50" inputmode="numeric" />
+    </div>
+    <div class="input-group">
+      <label for="targetTemp" id="label-targetTemp">희망 해동 온도 (°C)</label>
+      <input type="number" id="targetTemp" min="-20" max="50" value="4" inputmode="decimal" />
+    </div>
+    <div class="input-group">
+      <label for="envMethod" id="label-envMethod">해동 방법</label>
+      <select id="envMethod">
+        <option value="냉장 해동">냉장 해동 (권장)</option>
+        <option value="찬물 해동">찬물 해동</option>
+        <option value="상온 해동">상온 해동</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label for="envTemp" id="label-envTemp">해동 환경 온도 (°C)</label>
+      <input type="number" id="envTemp" min="0" max="50" value="4" inputmode="decimal" />
+    </div>
+    <button id="calculateBtn" type="button">해동 시간 계산</button>
+    <div id="result" class="result" style="display:none;">
+      <div class="result-item" id="result-method">선택된 해동 방법: <span id="methodResult" class="result-value"></span></div>
+      <div class="result-item" id="result-time">예상 해동 시간: <span id="timeResult" class="result-value"></span></div>
+      <div class="result-item" id="result-recommend">해동 후 권장 섭취 시간: <span id="recommendResult" class="result-value"></span></div>
+      <div id="waterInfo" class="water-info"></div>
+    </div>
+    <div class="chart-container"><canvas id="thawingChart"></canvas></div>
+    <div class="warning" id="warning-text">※ 목표 온도 ≤ 환경 온도, 초기 온도 < 목표 온도 조건에서 계산됩니다.</div>
+    <div class="disclaimer" id="disclaimer-text">본 프로그램은 참고용입니다. 실제 해동 시간은 실제 해동 환경에 따라 달라질 수 있습니다.</div>
+  </div>
+  <script>
+    // i18n
+    const translations = {
+      ko: {
+        title: '냉동 두리안 해동 시간 계산기',
+        initialTemp: '냉동 두리안 온도 (°C)',
+        weight: '두리안 중량 (g)',
+        targetTemp: '희망 해동 온도 (°C)',
+        envMethod: '해동 방법',
+        envTemp: '해동 환경 온도 (°C)',
+        calculateBtn: '해동 시간 계산',
+        resultMethod: '선택된 해동 방법:',
+        resultTime: '예상 해동 시간:',
+        resultRecommend: '해동 후 권장 섭취 시간:',
+        refrigeration: '냉장 해동 (권장)',
+        coldWater: '찬물 해동',
+        roomTemp: '상온 해동',
+        warning: '※ 목표 온도 ≤ 환경 온도, 초기 온도 < 목표 온도 조건에서 계산됩니다.',
+        disclaimer: '본 프로그램은 참고용입니다. 실제 해동 시간은 실제 해동 환경에 따라 달라질 수 있습니다.',
+        errorMsg: '입력 값을 확인해주세요',
+        errorInitialTemp: '오류: 초기 온도는 목표 온도보다 낮아야 합니다.',
+        errorTargetTemp: '오류: 목표 온도는 환경 온도보다 높을 수 없습니다.',
+        recommendNow: '해동 후 바로 드세요',
+        recommendLater: ' 이내',
+        noRecommend: '해동 후 빠른 시간 내에 드세요',
+        waterInfo: '※ 찬물 해동: 약 {waterL}L 사용, {interval}분 간격 {changes}회 교체',
+        chartTime: '시간 (시간)',
+        chartTemp: '온도 (°C)',
+        chartLabel1: '두리안 중심 온도',
+        chartLabel2: '해동 환경 온도',
+        chartTooltip: '온도 {temp}°C · {time}h',
+        chartTarget: '희망 해동 {temp}°C',
+        chartThaw: '해동 시간 {time}',
+        chartXLabel: '← {time} →',
+        chartPlus6: '영상 6°C'
+      },
+      zh: {
+        title: '冷冻榴莲解冻时间计算器',
+        initialTemp: '冷冻榴莲温度 (°C)',
+        weight: '榴莲重量 (g)',
+        targetTemp: '期望解冻温度 (°C)',
+        envMethod: '解冻方法',
+        envTemp: '解冻环境温度 (°C)',
+        calculateBtn: '计算解冻时间',
+        resultMethod: '所选解冻方法:',
+        resultTime: '预计解冻时间:',
+        resultRecommend: '解冻后建议食用时间:',
+        refrigeration: '冷藏解冻 (推荐)',
+        coldWater: '冷水解冻',
+        roomTemp: '常温解冻',
+        warning: '※ 计算基于目标温度 ≤ 环境温度和初始温度 < 目标温度的条件。',
+        disclaimer: '此程序仅供参考。实际解冻时间可能因实际解冻环境而异。',
+        errorMsg: '请检查输入值',
+        errorInitialTemp: '错误: 初始温度必须低于目标温度。',
+        errorTargetTemp: '错误: 目标温度不能高于环境温度。',
+        recommendNow: '解冻后立即食用',
+        recommendLater: '内',
+        noRecommend: '解冻后尽快食用',
+        waterInfo: '※ 冷水解冻: 使用约 {waterL}L水, 每 {interval}分钟更换 {changes}次',
+        chartTime: '时间 (小时)',
+        chartTemp: '温度 (°C)',
+        chartLabel1: '榴莲中心温度',
+        chartLabel2: '解冻环境温度',
+        chartTooltip: '温度 {temp}°C · {time}h',
+        chartTarget: '期望解冻 {temp}°C',
+        chartThaw: '解冻时间 {time}',
+        chartXLabel: '← {time} →',
+        chartPlus6: '零上 6°C'
+      },
+      en: {
+        title: 'Frozen Durian Thawing Time Calculator',
+        initialTemp: 'Frozen Durian Temp (°C)',
+        weight: 'Durian Weight (g)',
+        targetTemp: 'Desired Thawing Temp (°C)',
+        envMethod: 'Thawing Method',
+        envTemp: 'Thawing Environment Temp (°C)',
+        calculateBtn: 'Calculate Thawing Time',
+        resultMethod: 'Selected Thawing Method:',
+        resultTime: 'Estimated Thawing Time:',
+        resultRecommend: 'Recommended Consumption Time:',
+        refrigeration: 'Refrigerated Thawing (Recommended)',
+        coldWater: 'Cold Water Thawing',
+        roomTemp: 'Room Temp Thawing',
+        warning: '※ Calculation is based on the condition that target temp ≤ environment temp and initial temp < target temp.',
+        disclaimer: 'This program is for reference only. Actual thawing time may vary depending on the actual thawing environment.',
+        errorMsg: 'Please check the input values',
+        errorInitialTemp: 'Error: Initial temperature must be lower than the target temperature.',
+        errorTargetTemp: 'Error: Target temperature cannot be higher than the environment temperature.',
+        recommendNow: 'Consume immediately after thawing',
+        recommendLater: ' within',
+        noRecommend: 'Consume as soon as possible after thawing',
+        waterInfo: '※ Cold Water Thawing: Use about {waterL}L of water, change {changes} times every {interval} minutes',
+        chartTime: 'Time (hours)',
+        chartTemp: 'Temperature (°C)',
+        chartLabel1: 'Durian Core Temp',
+        chartLabel2: 'Thawing Environment Temp',
+        chartTooltip: 'Temp {temp}°C · {time}h',
+        chartTarget: 'Desired Thawing {temp}°C',
+        chartThaw: 'Thawing Time {time}',
+        chartXLabel: '← {time} →',
+        chartPlus6: '+6°C'
+      }
+    };
+
+    let currentLang = 'ko';
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      // (추가) URL에서 중량 매개변수 확인 및 적용
+      const urlParams = new URLSearchParams(window.location.search);
+      const weightFromUrl = urlParams.get('weight');
+      if (weightFromUrl && !isNaN(weightFromUrl)) {
+        document.getElementById('weight').value = parseFloat(weightFromUrl);
+      }
+
+      const annotation = window['chartjs-plugin-annotation'];
+      if (annotation) {
+        Chart.register(annotation);
+      }
+      initUI();
+      // 언어 선택 버튼에 이벤트 리스너 추가
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lang = btn.getAttribute('data-lang');
+          setLanguage(lang);
+        });
+      });
+    });
+
+    /**
+     * 현재 월을 기반으로 계절별 상온 온도를 반환하는 함수
+     * 사용자가 제공한 중국의 평균 실내 온도 데이터를 반영
+     */
+    function getSeasonalRoomTemp() {
+      const currentMonth = new Date().getMonth() + 1; // 1 (1월) ~ 12 (12월)
+      if (currentMonth >= 3 && currentMonth <= 5) { // 봄 (3~5월)
+        return 21;
+      } else if (currentMonth >= 6 && currentMonth <= 8) { // 여름 (6~8월)
+        return 25;
+      } else if (currentMonth >= 9 && currentMonth <= 10) { // 가을 (9~10월)
+        return 22;
+      } else { // 겨울 (11~2월)
+        return 19;
+      }
+    }
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      const t = translations[lang];
+
+      // 버튼 활성화 상태 업데이트
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        if (btn.getAttribute('data-lang') === lang) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      // 텍스트 업데이트
+      document.getElementById('app-title').textContent = t.title;
+      document.getElementById('label-initialTemp').textContent = t.initialTemp;
+      document.getElementById('label-weight').textContent = t.weight;
+      document.getElementById('label-targetTemp').textContent = t.targetTemp;
+      document.getElementById('label-envMethod').textContent = t.envMethod;
+      document.getElementById('label-envTemp').textContent = t.envTemp;
+      document.getElementById('calculateBtn').textContent = t.calculateBtn;
+      document.getElementById('result-method').childNodes[0].nodeValue = t.resultMethod;
+      document.getElementById('result-time').childNodes[0].nodeValue = t.resultTime;
+      document.getElementById('result-recommend').childNodes[0].nodeValue = t.resultRecommend;
+      document.getElementById('warning-text').textContent = t.warning;
+      document.getElementById('disclaimer-text').textContent = t.disclaimer;
+      
+      // select 옵션 업데이트
+      const select = document.getElementById('envMethod');
+      select.options[0].textContent = t.refrigeration;
+      select.options[1].textContent = t.coldWater;
+      select.options[2].textContent = t.roomTemp;
+    }
+    
+    // 계산 관련 상수 및 변수
+    const cp_frozen = 1.63; // kJ/kg·K
+    const cp_thawed = 3.25; // kJ/kg·K
+    const latent_heat = 217.1; // kJ/kg
+    const cp_water = 4.184; // kJ/kg·K (물의 비열)
+    const package_thickness = 0.00005; // m
+    const package_k = 0.34; // W/m·K
+    const ref_weight_kg = 0.45; // Reference weight for area calculation (450g)
+    const ref_package_area = 0.03; // m² (Reference area for 450g)
+    const default_environments = {
+      '냉장 해동 (권장)': { h: 3, default_temp: 4, water_per_kg: 0 },
+      '찬물 해동': { h: 300, default_temp: 10, water_per_kg: 5 },
+      // '상온 해동'의 기본 온도는 이제 동적으로 설정됨
+      '상온 해동': { h: 10, default_temp: 0, water_per_kg: 0 } 
+    };
+
+    // DOM 요소 캐싱
+    const initialTempInput = document.getElementById('initialTemp');
+    const weightInput = document.getElementById('weight');
+    const envMethodSelect = document.getElementById('envMethod');
+    const envTempInput = document.getElementById('envTemp');
+    const targetTempInput = document.getElementById('targetTemp');
+    const calcBtn = document.getElementById('calculateBtn');
+    const resultDiv = document.getElementById('result');
+    const methodResult = document.getElementById('methodResult');
+    const timeResult = document.getElementById('timeResult');
+    const recommendResult = document.getElementById('recommendResult');
+    const waterInfo = document.getElementById('waterInfo');
+    const ctx = document.getElementById('thawingChart').getContext('2d');
+    let thawingChart = null;
+    
+    function initUI() {
+      updateEnvUI();
+      envMethodSelect.addEventListener('change', updateEnvUI);
+
+      // 모바일 및 데스크톱 이벤트 처리
+      calcBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        calculateThawingTime();
+      });
+      calcBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        calculateThawingTime();
+      });
+    }
+
+    function updateEnvUI() {
+      // 선택된 옵션의 텍스트를 사용하여 default_environments 객체에 접근
+      const selectedOptionText = envMethodSelect.options[envMethodSelect.selectedIndex].text;
+      
+      // 상온 해동 선택 시, 계절별 온도를 자동으로 설정
+      if (selectedOptionText === '상온 해동') {
+        envTempInput.value = getSeasonalRoomTemp();
+      } else {
+        const env = default_environments[selectedOptionText];
+        if (env) {
+          envTempInput.value = env.default_temp;
+        }
+      }
+    }
+
+    function formatHours(h) {
+      const t = translations[currentLang];
+      if (h <= 0) return '0' + (currentLang === 'en' ? 'min' : '분');
+      const total = Math.round(h * 60);
+      const hh = Math.floor(total / 60);
+      const mm = total % 60;
+      if (currentLang === 'ko') {
+        if (!hh) return `${mm}분`;
+        if (!mm) return `${hh}시간`;
+        return `${hh}시간 ${mm}분`;
+      } else if (currentLang === 'zh') {
+        if (!hh) return `${mm}分钟`;
+        if (!mm) return `${hh}小时`;
+        return `${hh}小时 ${mm}分钟`;
+      } else { // en
+        if (!hh) return `${mm} min`;
+        if (!mm) return `${hh} hours`;
+        return `${hh} hours ${mm} min`;
+      }
+    }
+    
+    /**
+     * 열역학 시뮬레이션 기반의 찬물 해동 시간 계산
+     * 물의 온도 변화와 교체 주기를 반영하여 더 현실적인 값을 산출
+     */
+    function simulateColdWaterThawing(initial_temp, weight_kg, env_temp, target_temp) {
+      const dt = 1; // Time step in seconds
+      const waterPerKg = default_environments['찬물 해동'].water_per_kg;
+      const waterVolumeL = weight_kg * waterPerKg;
+      const waterMassKg = waterVolumeL; // 1L of water ~ 1kg
+      const h_coeff = default_environments['찬물 해동'].h;
+      const thawIntervalSec = 10 * 60; // Water change interval in seconds
+
+      // 중량에 따른 표면적 보정
+      const package_area = ref_package_area * Math.pow(weight_kg / ref_weight_kg, 2/3);
+
+      let t_sec = 0;
+      let durianTemp = initial_temp;
+      let waterTemp = env_temp;
+      let q_latent_remaining = weight_kg * latent_heat * 1000; // J
+
+      const durianPoints = [{ x: 0, y: initial_temp }];
+      const waterPoints = [{ x: 0, y: env_temp }];
+      let t_plus6_h = -1;
+
+      while (durianTemp < target_temp) {
+        // Stop if the simulation runs too long (e.g., if temperatures get too close)
+        if (t_sec > 10 * 3600) {
+           break; // Prevent infinite loops
+        }
+
+        // Heat transfer rate from water to durian
+        const q_rate_watts = h_coeff * package_area * (waterTemp - durianTemp);
+        const heat_transferred_joules = q_rate_watts * dt;
+
+        if (durianTemp < 0) { // Phase 1: Frozen state
+          durianTemp += heat_transferred_joules / (weight_kg * cp_frozen * 1000);
+        } else if (q_latent_remaining > 0) { // Phase 2: Latent heat (melting)
+          q_latent_remaining -= heat_transferred_joules;
+          durianTemp = 0; // Temp stays at 0°C during phase change
+        } else { // Phase 3: Thawed state
+          durianTemp += heat_transferred_joules / (weight_kg * cp_thawed * 1000);
+        }
+
+        // Update water temperature
+        waterTemp -= heat_transferred_joules / (waterMassKg * cp_water * 1000);
+
+        // Water change
+        if (t_sec > 0 && t_sec % thawIntervalSec === 0) {
+          waterTemp = env_temp;
+        }
+
+        // Record data for the chart
+        if (t_sec % 30 === 0) { // Record points every 30 seconds for smoother chart
+          durianPoints.push({ x: t_sec / 3600, y: durianTemp });
+          waterPoints.push({ x: t_sec / 3600, y: waterTemp });
+        }
+        
+        // Check if durian reached +6C for recommended time
+        if (t_plus6_h === -1 && durianTemp >= 6) {
+          t_plus6_h = t_sec / 3600;
+        }
+
+        t_sec += dt;
+      }
+      
+      // Add final data point for target temp
+      durianPoints.push({ x: t_sec / 3600, y: durianTemp });
+      waterPoints.push({ x: t_sec / 3600, y: waterTemp });
+
+      const thawTimeHours = t_sec / 3600;
+
+      return {
+        thawTimeHours,
+        t_plus6_h,
+        durianPoints,
+        waterPoints,
+        waterChanges: Math.max(1, Math.floor(t_sec / thawIntervalSec))
+      };
+    }
+    
+    function calculateThawingTime() {
+      const initial_temp = parseFloat(initialTempInput.value);
+      const weight = parseFloat(weightInput.value) / 1000; // kg
+      const env_temp = parseFloat(envTempInput.value);
+      const target_temp = parseFloat(targetTempInput.value);
+      const env = default_environments[envMethodSelect.options[envMethodSelect.selectedIndex].text];
+      const t = translations[currentLang];
+
+      // 유효성 검사
+      if ([initial_temp, weight, env_temp, target_temp].some(v => Number.isNaN(v))) {
+        showError(t.errorMsg);
+        return;
+      }
+      if (initial_temp >= target_temp) {
+        showError(t.errorInitialTemp);
+        return;
+      }
+      if (target_temp > env_temp) {
+        showError(t.errorTargetTemp);
+        return;
+      }
+
+      let thawTimeHours;
+      let recommend_h = -1;
+      let durianPoints, waterPoints;
+      let waterL = 0;
+      let waterChanges = 0;
+
+      if (envMethodSelect.value === '찬물 해동') {
+        const simulationResult = simulateColdWaterThawing(initial_temp, weight, env_temp, target_temp);
+        thawTimeHours = simulationResult.thawTimeHours;
+        const t_plus6_h = simulationResult.t_plus6_h;
+        recommend_h = (t_plus6_h > 0) ? (t_plus6_h - thawTimeHours) : -1;
+        durianPoints = simulationResult.durianPoints;
+        waterPoints = simulationResult.waterPoints;
+        waterChanges = simulationResult.waterChanges;
+        waterL = Math.ceil(weight * env.water_per_kg * 2) / 2; // 0.5L 단위
+      } else {
+        // 중량에 따른 표면적 보정
+        const package_area_corrected = ref_package_area * Math.pow(weight / ref_weight_kg, 2/3);
+
+        // 기존의 단순 근사 계산식 (냉장/상온 해동)
+        const U = 1 / (1 / env.h + package_thickness / package_k); // W/m²K
+        const heat_rate = U * package_area_corrected * (env_temp - initial_temp); // J/s
+        const Q1 = (weight * cp_frozen * (0 - initial_temp)) * 1000;
+        const Q2 = (weight * latent_heat) * 1000;
+        const Q3_target = (weight * cp_thawed * (target_temp - 0)) * 1000;
+        const Q3_plus6 = (weight * cp_thawed * (6 - 0)) * 1000;
+
+        const Q_to_target = Q1 + Q2 + Q3_target;
+        const Q_to_plus6 = Q1 + Q2 + Q3_plus6;
+
+        thawTimeHours = Q_to_target / heat_rate / 3600;
+        const t_plus6_h = Q_to_plus6 / heat_rate / 3600;
+        recommend_h = t_plus6_h - thawTimeHours;
+
+        // 차트 데이터 생성 (단순 근사)
+        const step = 40;
+        const timeToZero = thawTimeHours * (0 - initial_temp) / (target_temp - initial_temp);
+        durianPoints = [];
+        for (let i = 0; i <= step; i++) {
+          const t_val = timeToZero * (i / step);
+          const y_val = initial_temp + (0 - initial_temp) * (i / step);
+          durianPoints.push({ x: t_val, y: y_val });
+        }
+        for (let i = 1; i <= step; i++) {
+          const t_val = timeToZero + (thawTimeHours - timeToZero) * (i / step);
+          const y_val = 0 + (target_temp - 0) * (i / step);
+          durianPoints.push({ x: t_val, y: y_val });
+        }
+        if (env_temp >= target_temp + 6) {
+          for (let i = 1; i <= step; i++) {
+            const t_val = thawTimeHours + (t_plus6_h - thawTimeHours) * (i / step);
+            const y_val = target_temp + (6 - target_temp) * (i / step);
+            durianPoints.push({ x: t_val, y: y_val });
+          }
+        }
+        waterPoints = null; // 물 온도 그래프는 그리지 않음
+      }
+      
+      // 결과 표시
+      methodResult.textContent = envMethodSelect.options[envMethodSelect.selectedIndex].text;
+      timeResult.textContent = formatHours(thawTimeHours);
+
+      if (env_temp < 6) {
+        recommendResult.textContent = t.noRecommend;
+      } else if (recommend_h > 0 && recommend_h < 0.5) {
+        recommendResult.textContent = t.recommendNow;
+      } else if (recommend_h > 0) {
+        recommendResult.textContent = formatHours(recommend_h) + t.recommendLater;
+      } else {
+        recommendResult.textContent = t.noRecommend;
+      }
+      resultDiv.style.display = 'block';
+
+      // 찬물 해동 가이드
+      waterInfo.textContent = '';
+      if (envMethodSelect.value === '찬물 해동') {
+        waterInfo.textContent = t.waterInfo.replace('{waterL}', waterL.toFixed(1)).replace('{interval}', 10).replace('{changes}', waterChanges);
+      }
+      
+      drawChart(initial_temp, target_temp, env_temp, thawTimeHours, recommend_h, durianPoints, waterPoints);
+    }
+
+    function showError(msg) {
+      methodResult.textContent = msg;
+      timeResult.textContent = '-';
+      recommendResult.textContent = '-';
+      resultDiv.style.display = 'block';
+    }
+
+    function drawChart(initial_temp, target_temp, env_temp, t_target_h, recommend_h, durianPoints, waterPoints) {
+      const t = translations[currentLang];
+      if (thawingChart) thawingChart.destroy();
+
+      const datasets = [{
+        label: t.chartLabel1,
+        data: durianPoints,
+        borderColor: '#4CAF50',
+        backgroundColor: 'rgba(76,175,80,0.12)',
+        tension: 0.3,
+        fill: true,
+        pointRadius: 0
+      }];
+      if (waterPoints) {
+         datasets.push({
+            label: t.chartLabel2,
+            data: waterPoints,
+            borderColor: '#1e88e5',
+            borderDash: [6, 4],
+            pointRadius: 0,
+            fill: false,
+            tension: 0.3
+         });
+      }
+
+      // 축 범위 & 눈금
+      const xMax = (waterPoints ? Math.max(...waterPoints.map(p => p.x)) : t_target_h) * 1.15;
+      const yMin = Math.min(initial_temp, 0, target_temp, waterPoints ? Math.min(...waterPoints.map(p => p.y)) : Infinity) - 2;
+      const yMax = Math.max(6, target_temp, waterPoints ? Math.max(...waterPoints.map(p => p.y)) : -Infinity) + 2;
+
+      thawingChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          parsing: false,
+          scales: {
+            x: {
+              type: 'linear',
+              title: { display: true, text: t.chartTime, font: { weight: 'bold' } },
+              min: 0,
+              max: xMax,
+              ticks: { stepSize: xMax / 8 }
+            },
+            y: {
+              title: { display: true, text: t.chartTemp, font: { weight: 'bold' } },
+              min: yMin,
+              max: yMax,
+              beginAtZero: false,
+              ticks: { stepSize: 2 }
+            }
+          },
+          plugins: {
+            legend: { display: true },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const temp = ctx.parsed.y.toFixed(1);
+                  const time = ctx.parsed.x.toFixed(2);
+                  return t.chartTooltip.replace('{temp}', temp).replace('{time}', time);
+                }
+              }
+            },
+            annotation: {
+              annotations: {
+                targetTempLine: {
+                  type: 'line',
+                  yMin: target_temp,
+                  yMax: target_temp,
+                  borderColor: '#FF1744',
+                  borderWidth: 2,
+                  label: {
+                    display: true,
+                    content: t.chartTarget.replace('{temp}', target_temp),
+                    position: 'end',
+                    backgroundColor: '#FF1744',
+                    color: '#fff',
+                    padding: 4
+                  }
+                },
+                thawVertical: {
+                  type: 'line',
+                  xMin: t_target_h,
+                  xMax: t_target_h,
+                  yMin: yMin,
+                  yMax: yMax,
+                  borderColor: '#616161',
+                  borderDash: [4, 4],
+                  borderWidth: 2,
+                  label: {
+                    display: true,
+                    content: t.chartThaw.replace('{time}', formatHours(t_target_h)),
+                    position: 'start',
+                    backgroundColor: '#424242',
+                    color: '#fff',
+                    padding: 4
+                  }
+                },
+                xAxisLabel: {
+                  type: 'label',
+                  xValue: t_target_h,
+                  yValue: yMin,
+                  backgroundColor: 'rgba(0,0,0,0)',
+                  color: '#212121',
+                  content: t.chartXLabel.replace('{time}', formatHours(t_target_h)),
+                  yAdjust: 18
+                },
+                plus6: {
+                  type: 'line',
+                  yMin: 6,
+                  yMax: 6,
+                  borderColor: '#FF9100',
+                  borderDash: [6, 4],
+                  borderWidth: 1,
+                  label: {
+                    display: true,
+                    content: t.chartPlus6,
+                    backgroundColor: '#FF9100',
+                    color: '#fff',
+                    padding: 4
+                  }
+                },
+                recommendBox: (env_temp >= target_temp + 6 && recommend_h > 0) ? {
+                  type: 'box',
+                  xMin: t_target_h,
+                  xMax: t_target_h + recommend_h,
+                  yMin: Math.min(target_temp, 6),
+                  yMax: Math.max(target_temp, 6),
+                  backgroundColor: 'rgba(255,145,0,0.08)',
+                  borderColor: 'rgba(255,145,0,0.25)'
+                } : undefined
+              }
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
