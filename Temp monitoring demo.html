@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>냉동 컨테이너 온도 변화 그래프</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<style>
+  body { margin:0; padding:12px; font-family:Arial, sans-serif; }
+  .container { max-width:600px; width:100%; margin:auto; text-align:center; }
+  .lang-switch { margin-bottom:12px; }
+  .lang-switch button {
+    padding:6px 14px;
+    margin:0 4px;
+    border:1px solid #ccc;
+    background:#f5f5f5;
+    cursor:pointer;
+    font-size:14px;
+  }
+  .info-line  { margin:6px 0; font-size:15px; text-align:left; }
+  .info-label { font-weight:bold; margin-right:4px; display:inline-block; min-width:120px; }
+
+  .main-btn {
+    margin-top:14px;
+    font-size:18px;
+    padding:14px 24px;
+    background:#0c73c2;
+    color:#fff;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    width:100%;
+  }
+  canvas { width:100% !important; height:auto !important; margin-top:18px; }
+  h2,h3 { margin:12px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h2 id="title">냉동 컨테이너 온도 변화 그래프</h2>
+
+  <!-- Language Switch -->
+  <div class="lang-switch">
+    <button onclick="setLanguage('cn')">CN</button>
+    <button onclick="setLanguage('kr')">KR</button>
+    <button onclick="setLanguage('us')">US</button>
+  </div>
+
+  <!-- Product Info (static text) -->
+  <div id="productInfo">
+    <div class="info-line"><span class="info-label" id="lbl-productName">제품명</span><span id="val-productName">냉동 두리안</span></div>
+    <div class="info-line"><span class="info-label" id="lbl-origin">원산지</span><span id="val-origin">베트남</span></div>
+    <div class="info-line"><span class="info-label" id="lbl-variety">품종</span><span id="val-variety">몸통</span></div>
+    <div class="info-line"><span class="info-label" id="lbl-harvest">수확시기</span><span id="val-harvest">2025년 8월</span></div>
+    <div class="info-line"><span class="info-label" id="lbl-prodDate">생산일</span><span id="val-prodDate">2025-07-18</span></div>
+    <div class="info-line"><span class="info-label" id="lbl-lot">Lot 번호</span><span id="val-lot">LOT-DK-230715</span></div>
+    <div class="info-line"><span class="info-label" id="lbl-freezing">냉동방식</span><span id="val-freezing">IQF</span></div>
+    <div class="info-line"><span class="info-label" id="lbl-shipDate">출고일</span><span id="val-shipDate">2025-08-01</span></div>
+    <div class="info-line"><span class="info-label" id="lbl-exporter">수출자</span><span id="val-exporter">DK Costech Co., Ltd.</span></div>
+  </div>
+
+  <button
+    id="calcBtn"
+    class="main-btn"
+    onclick="window.open('https://DKCostech.github.io/durian-tools/durian_thawing_calculator_450_V15.html','_blank');">
+    예상 해동시간 계산
+  </button>
+
+  <h3 id="realtimeTitle">실시간 컨테이너 온도 정보</h3>
+  <canvas id="tempChart"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let chart;
+const labels = ["08/01","08/02","08/03","08/04","08/05","08/06"];
+const dataPoints = [-19.0, -20.5, -18.5, -19.8, -20.1, -19.3];
+const minValue   = Math.min(...dataPoints);
+const maxValue   = Math.max(...dataPoints);
+
+const i18nText = {
+  kr:{
+    title:"냉동 컨테이너 온도 변화 그래프",
+    calcBtn:"예상 해동시간 계산",
+    realtimeTitle:"실시간 컨테이너 온도 정보",
+    values:{
+      productName:"냉동 두리안",
+      origin:"베트남",
+      variety:"몸통",
+      harvest:"2025년 8월",
+      prodDate:"2025-07-18",
+      lot:"LOT-DK-230715",
+      freezing:"IQF",
+      shipDate:"2025-08-01",
+      exporter:"DK Costech Co., Ltd."
+    },
+    labels:{
+      productName:"제품명", origin:"원산지", variety:"품종",
+      harvest:"수확시기", prodDate:"생산일", lot:"Lot 번호",
+      freezing:"냉동방식", shipDate:"출고일", exporter:"수출자"
+    },
+    series:"측정된 온도"
+  },
+  us:{
+    title:"Temperature Change of Frozen Container",
+    calcBtn:"Calculate Estimated Thaw Time",
+    realtimeTitle:"Real-time Container Temperature",
+    values:{
+      productName:"Frozen Durian",
+      origin:"Vietnam",
+      variety:"Monthong",
+      harvest:"August 2025",
+      prodDate:"2025-07-18",
+      lot:"LOT-DK-230715",
+      freezing:"IQF",
+      shipDate:"2025-08-01",
+      exporter:"DK Costech Co., Ltd."
+    },
+    labels:{
+      productName:"Product Name", origin:"Origin", variety:"Variety",
+      harvest:"Harvest Time", prodDate:"Production Date", lot:"Lot Number",
+      freezing:"Freezing Method", shipDate:"Shipment Date", exporter:"Exporter"
+    },
+    series:"Measured Temperature"
+  },
+  cn:{
+    title:"冷冻集装箱温度变化图",
+    calcBtn:"解冻时间计算",
+    realtimeTitle:"实时集装箱温度",
+    values:{
+      productName:"冷冻榴莲",
+      origin:"越南",
+      variety:"金枕",
+      harvest:"2025年8月",
+      prodDate:"2025-07-18",
+      lot:"LOT-DK-230715",
+      freezing:"IQF",
+      shipDate:"2025-08-01",
+      exporter:"DK Costech Co., Ltd."
+    },
+    labels:{
+      productName:"产品名称", origin:"原产地", variety:"品种",
+      harvest:"采收时间", prodDate:"生产日期", lot:"批号",
+      freezing:"冷冻方式", shipDate:"出库日期", exporter:"出口商"
+    },
+    series:"测量温度"
+  }
+};
+
+function setLanguage(lang){
+  const t = i18nText[lang];
+
+  document.getElementById('title').innerText        = t.title;
+  document.getElementById('calcBtn').innerText      = t.calcBtn;
+  document.getElementById('realtimeTitle').innerText= t.realtimeTitle;
+
+  // Labels
+  document.getElementById('lbl-productName').innerText = t.labels.productName;
+  document.getElementById('lbl-origin').innerText      = t.labels.origin;
+  document.getElementById('lbl-variety').innerText     = t.labels.variety;
+  document.getElementById('lbl-harvest').innerText     = t.labels.harvest;
+  document.getElementById('lbl-prodDate').innerText    = t.labels.prodDate;
+  document.getElementById('lbl-lot').innerText         = t.labels.lot;
+  document.getElementById('lbl-freezing').innerText    = t.labels.freezing;
+  document.getElementById('lbl-shipDate').innerText    = t.labels.shipDate;
+  document.getElementById('lbl-exporter').innerText    = t.labels.exporter;
+
+  // Values
+  document.getElementById('val-productName').innerText = t.values.productName;
+  document.getElementById('val-origin').innerText      = t.values.origin;
+  document.getElementById('val-variety').innerText     = t.values.variety;
+  document.getElementById('val-harvest').innerText     = t.values.harvest;
+  document.getElementById('val-prodDate').innerText    = t.values.prodDate;
+  document.getElementById('val-lot').innerText         = t.values.lot;
+  document.getElementById('val-freezing').innerText    = t.values.freezing;
+  document.getElementById('val-shipDate').innerText    = t.values.shipDate;
+  document.getElementById('val-exporter').innerText    = t.values.exporter;
+
+  drawChart(t.series);
+}
+
+function drawChart(labelName){
+  const ctx = document.getElementById('tempChart').getContext('2d');
+  if(chart) chart.destroy();
+  chart = new Chart(ctx,{
+    type:'line',
+    data:{ labels:labels, datasets:[{
+      label:labelName,
+      data:dataPoints,
+      borderWidth:1,
+      tension:0.3,
+      pointRadius:4,
+      pointBackgroundColor:dataPoints.map(v=>(v===minValue||v===maxValue)?'black':'transparent')
+    }]},
+    options:{
+      responsive:true,
+      plugins:{legend:{display:true}, tooltip:{enabled:true}},
+      scales:{
+        x:{ticks:{callback:(v,i)=>labels[i]}},
+        y:{min:-21,max:-15,ticks:{stepSize:1,callback:v=>v+"℃"}}
+      }
+    },
+    plugins:[{
+      id:'datalabels',
+      beforeDraw:(c)=>{
+        const ctx=c.ctx;
+        c.data.datasets[0].data.forEach((v,i)=>{
+          if(v===minValue||v===maxValue){
+            ctx.save();
+            ctx.textAlign="center";
+            ctx.font="12px Arial";
+            ctx.fillText(v+'℃', c.getDatasetMeta(0).data[i].x,c.getDatasetMeta(0).data[i].y-10);
+            ctx.restore();
+          }
+        });
+      }
+    }]
+  });
+}
+
+// default language = CN
+setLanguage('cn');
+</script>
+</body>
+</html>
